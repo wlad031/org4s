@@ -18,5 +18,5 @@ All notable changes to this project will be documented in this file.
 - first
 - second
 
-[0.1.0]: https://github.com/wlad031/scala-org-parser/releases/tag/v0.1.0
+[0.1.0]: https://github.com/wlad031/scorg/releases/tag/v0.1.0
 
