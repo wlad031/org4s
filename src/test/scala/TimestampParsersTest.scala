@@ -1,14 +1,14 @@
 package dev.vgerasimov.scorg
-package parsers
 
-import models.timestamp._
-import parsers.timestamp._
+import models.objects.Timestamp.Date._
+import models.objects.Timestamp.Time._
+import models.objects.Timestamp._
 
 import fastparse._
 import org.scalacheck.Gen
 import org.scalacheck.Prop._
 
-class TimestampParsersTest extends munit.ScalaCheckSuite {
+class TimestampParsersTest extends ParserCheckSuite {
 
   private val genDate = for {
     year  <- Gen.chooseNum(0, 3000).map(Year.apply)
@@ -31,7 +31,7 @@ class TimestampParsersTest extends munit.ScalaCheckSuite {
     forAll(genDate) { (d: Date) =>
       {
         val toParse = d.toString
-        val parsed = parse(toParse, date(_))
+        val parsed = parse(toParse, parser.timestamp.date(_))
         parsed match {
           case Parsed.Success(value, _) => assertEquals(value, d)
           case _: Parsed.Failure        => fail(s"$toParse is not parsed")
@@ -44,7 +44,7 @@ class TimestampParsersTest extends munit.ScalaCheckSuite {
     forAll(genTime) { (t: Time) =>
       {
         val toParse = t.toString
-        val parsed = parse(toParse, time(_))
+        val parsed = parse(toParse, parser.timestamp.time(_))
         parsed match {
           case Parsed.Success(value, _) => assertEquals(value, t)
           case _: Parsed.Failure        => fail(s"$toParse is not parsed")
@@ -55,7 +55,7 @@ class TimestampParsersTest extends munit.ScalaCheckSuite {
 
   test("TIMESTAMP should parse valid active timestamp range string") {
     val toParse = "<2020-01-29 Thu 12:34 +5d>--<2021-03-12 23:59 --31h>"
-    val parsed = parse(toParse, timestamp(_))
+    val parsed = parse(toParse, parser.timestamp.timestamp(_))
     parsed match {
       case Parsed.Success(value, _) =>
         assertEquals(
@@ -63,13 +63,13 @@ class TimestampParsersTest extends munit.ScalaCheckSuite {
           ActiveTimestampRange(
             ActiveTimestamp(
               Date.of(2020, 1, 29, Some("Thu")),
-              Time.of(12, 34),
-              RepeaterOrDelay.CumulateRepeater(RepeaterOrDelay.Value(5), RepeaterOrDelay.Unit.Day)
+              Some(Time.of(12, 34)),
+              Some(RepeaterOrDelay.CumulateRepeater(RepeaterOrDelay.Value(5), RepeaterOrDelay.Unit.Day))
             ),
             ActiveTimestamp(
               Date.of(2021, 3, 12, None),
-              Time.of(23, 59),
-              RepeaterOrDelay.FirstTypeDelay(RepeaterOrDelay.Value(31), RepeaterOrDelay.Unit.Hour)
+              Some(Time.of(23, 59)),
+              Some(RepeaterOrDelay.FirstTypeDelay(RepeaterOrDelay.Value(31), RepeaterOrDelay.Unit.Hour))
             )
           )
         )

@@ -1,12 +1,11 @@
 package dev.vgerasimov.scorg
-package parsers
 
-import models.table._
-import parsers.table._
+import models.greater_elements.Table
+import ops.table._
 
 import fastparse._
 
-class TableParsersTest extends munit.ScalaCheckSuite {
+class TableParsersTest extends ParserCheckSuite {
 
   test("TABLE should parse simple valid table") {
     val toParse =
@@ -15,7 +14,7 @@ class TableParsersTest extends munit.ScalaCheckSuite {
          || Peter |  1234 |  17 |
          || Anna  |  4321 |  25 |
          |""".stripMargin
-    val parsed = parse(toParse, table(_))
+    val parsed = parse(toParse, parser.table.table(_))
     parsed match {
       case Parsed.Success(value, _) =>
         val expected: Table =
