@@ -1,19 +1,20 @@
 package dev.vgerasimov.scorg
 
 import models.Headline._
-import models.elements.{ EmptyLines, NodeProperty, Paragraph, Planning }
+import models.elements.{ EmptyLines, NodeProperty, Paragraph }
+import models.greater_elements.PropertyDrawer
 import models.objects.Timestamp.Date.{ Day, DayName, Month, Year }
 import models.objects.Timestamp.Time.{ Hour, Minute }
 import models.objects.Timestamp.{ Date, Time }
 import models.objects.{ Text, TextMarkup, Timestamp }
-import models.{ Headline, PropertyDrawer, Section }
+import models.{ Headline, Planning, Section }
 import ops.table._
 
 class SectionParsersTest extends ParserCheckSuite {
 
   test("PARAGRAPH should parse single word") {
     checkParser(
-      parser.paragraph(_),
+      parser.paragraph.paragraph(_),
       "hello",
       Paragraph(List(Text("hello")))
     )
@@ -21,7 +22,7 @@ class SectionParsersTest extends ParserCheckSuite {
 
   test("PARAGRAPH should parse single line text") {
     checkParser(
-      parser.paragraph(_),
+      parser.paragraph.paragraph(_),
       "hello awesome world!",
       Paragraph(List(Text("hello awesome world!")))
     )
@@ -29,7 +30,7 @@ class SectionParsersTest extends ParserCheckSuite {
 
   test("PARAGRAPH should parse text until first newline character") {
     checkParser(
-      parser.paragraph(_),
+      parser.paragraph.paragraph(_),
       """hello
         |world
         |!""".stripMargin,
@@ -45,9 +46,8 @@ class SectionParsersTest extends ParserCheckSuite {
         |
         |""".stripMargin,
       Section(
-        Headline(Stars(1), None, None, Some(Title("H1")), None),
-        List(Paragraph(List(Text("hello\n"))), EmptyLines(1)),
-        Nil
+        Headline(1, title = Some(Title("H1"))),
+        List(Paragraph(List(Text("hello\n"))), EmptyLines(1))
       )
     )
   }
@@ -60,9 +60,8 @@ class SectionParsersTest extends ParserCheckSuite {
         |hello
         |""".stripMargin,
       Section(
-        Headline(Stars(1), None, None, Some(Title("H1")), None),
-        List(EmptyLines(1), Paragraph(List(Text("hello\n")))),
-        Nil
+        Headline(1, title = Some(Title("H1"))),
+        List(EmptyLines(1), Paragraph(List(Text("hello\n"))))
       )
     )
   }
@@ -76,9 +75,8 @@ class SectionParsersTest extends ParserCheckSuite {
         |
         |""".stripMargin,
       Section(
-        Headline(Stars(1), None, None, Some(Title("H1")), None),
-        List(EmptyLines(1), Paragraph(List(Text("hello\n"))), EmptyLines(1)),
-        Nil
+        Headline(1, title = Some(Title("H1"))),
+        List(EmptyLines(1), Paragraph(List(Text("hello\n"))), EmptyLines(1))
       )
     )
   }
@@ -95,7 +93,7 @@ class SectionParsersTest extends ParserCheckSuite {
         |
         |""".stripMargin,
       Section(
-        Headline(Stars(1), None, None, Some(Title("H1")), None),
+        Headline(1, title = Some(Title("H1"))),
         List(EmptyLines(1), Paragraph(List(Text("hello\n"))), EmptyLines(1)),
         propertyDrawer = Some(
           PropertyDrawer(List(NodeProperty("ID", Some("BA881640-C289-4305-8CC6-464CEA23AA77"))))
@@ -115,7 +113,7 @@ class SectionParsersTest extends ParserCheckSuite {
         |
         |""".stripMargin,
       Section(
-        Headline(Stars(1), None, None, Some(Title("H1")), None),
+        Headline(1, title = Some(Title("H1"))),
         List(
           EmptyLines(1),
           ($("A") | $("B") | $("C")) +
@@ -163,11 +161,13 @@ class SectionParsersTest extends ParserCheckSuite {
         |""".stripMargin,
       Section(
         headline = Headline(
-          Stars(2),
+          2,
           Some(Keyword.Done("DONE")),
           None,
-          Some(Title(Text("This is the"), TextMarkup.verbatim(" ", "heading"), Text(" with tag"))),
-          Some(Tags(List("tag")))
+          Some(
+            Title(List(Text("This is the"), TextMarkup.verbatim(" ", "heading"), Text(" with tag")))
+          ),
+          List("tag")
         ),
         planning = Some(
           Planning(
@@ -198,7 +198,7 @@ class SectionParsersTest extends ParserCheckSuite {
         ),
         childSections = List(
           Section(
-            Headline(Stars(3), title = Some(Title("First subheading"))),
+            Headline(3, title = Some(Title("First subheading"))),
             elements = List(
               EmptyLines(1),
               Paragraph(
@@ -215,7 +215,7 @@ class SectionParsersTest extends ParserCheckSuite {
           ),
           Section(
             Headline(
-              Stars(3),
+              3,
               priority = Some(Priority('A')),
               title = Some(Title("Second subheading"))
             ),
@@ -235,9 +235,9 @@ class SectionParsersTest extends ParserCheckSuite {
             childSections = List(
               Section(
                 Headline(
-                  Stars(4),
+                  4,
                   title = Some(Title("Subsubheading")),
-                  tags = Some(Tags(List("fun", "lol")))
+                  tags = List("fun", "lol")
                 ),
                 elements = List(
                   EmptyLines(1),
@@ -257,7 +257,7 @@ class SectionParsersTest extends ParserCheckSuite {
             )
           ),
           Section(
-            Headline(Stars(3), title = Some(Title("Third subheading"))),
+            Headline(3, title = Some(Title("Third subheading"))),
             elements = List(
               EmptyLines(1),
               Paragraph(

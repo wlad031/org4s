@@ -1,6 +1,5 @@
 package dev.vgerasimov.scorg
 
-import context.OrgContext
 import models.Headline
 import models.Headline._
 import models.objects.Text
@@ -32,7 +31,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
       case (n, starsString) =>
         val parsed = parse(starsString, parser.headline.stars()(_))
         parsed match {
-          case Parsed.Success(value, _) => assertEquals(value, Stars(n))
+          case Parsed.Success(value, _) => assertEquals(value, n)
           case r: Parsed.Failure        => fail(s"$starsString not parsed: $r")
         }
     }
@@ -66,7 +65,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
       val toParse = s":$tagString:"
       val parsed = parse(toParse, parser.headline.tags(_))
       parsed match {
-        case Parsed.Success(value, _) => assertEquals(value, Tags(List(tagString)))
+        case Parsed.Success(value, _) => assertEquals(value, List(tagString))
         case r: Parsed.Failure        => fail(s"$toParse not parsed: $r")
       }
     }
@@ -77,7 +76,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
       val toParse = tagStrings.mkString(":", ":", ":")
       val parsed = parse(toParse, parser.headline.tags(_))
       parsed match {
-        case Parsed.Success(value, _) => assertEquals(value, Tags(tagStrings))
+        case Parsed.Success(value, _) => assertEquals(value, tagStrings)
         case r: Parsed.Failure        => fail(s"$toParse not parsed: $r")
       }
     }
@@ -94,7 +93,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
         val parsed = parse(toParse, parser.headline.headline()(_))
         parsed match {
           case Parsed.Success(value, _) =>
-            assertEquals(value, Headline(Stars(n), None, None, None, None))
+            assertEquals(value, Headline(n))
           case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
         }
     }
@@ -108,11 +107,8 @@ class HeadlineParsersTest extends ParserCheckSuite {
         assertEquals(
           value,
           Headline(
-            Stars(1),
-            None,
-            None,
-            Some(Title(List(Text("this is"), italic(" ", "italic"), Text(" headline")))),
-            None
+            1,
+            title = Some(Title(List(Text("this is"), italic(" ", "italic"), Text(" headline"))))
           )
         )
       case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
@@ -127,11 +123,9 @@ class HeadlineParsersTest extends ParserCheckSuite {
         assertEquals(
           value,
           Headline(
-            Stars(1),
-            None,
-            None,
-            Some(Title(List(Text("this is"), italic(" ", "italic"), Text(" headline")))),
-            Some(Tags(List("tag1", "tag2")))
+            1,
+            title = Some(Title(List(Text("this is"), italic(" ", "italic"), Text(" headline ")))),
+            tags = List("tag1", "tag2")
           )
         )
       case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
@@ -143,7 +137,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
       starsGen,
       Gen.option(
         Gen.oneOf(
-          OrgContext.default.todoKeywords._1 ++ OrgContext.default.todoKeywords._2
+          OrgContext.default.todoKeywords.todo ++ OrgContext.default.todoKeywords.done
         )
       ),
       Gen.option(priorityGen),
@@ -171,15 +165,15 @@ class HeadlineParsersTest extends ParserCheckSuite {
             assertEquals(
               value,
               Headline(
-                Stars(n),
+                n,
                 optKeyword.map(s =>
-                  if (OrgContext.default.todoKeywords._1.contains(s)) Keyword.Todo(s)
+                  if (OrgContext.default.todoKeywords.todo.contains(s)) Keyword.Todo(s)
                   else Keyword.Done(s)
                 ),
                 optPriority.map(_._1).map(Priority),
-                optTitle.map(Title.apply),
-                optTags.map(Tags),
-                isComment = optComment.isDefined
+                optTitle.map(_ + " ").map(Title.apply),
+                optTags.getOrElse(Nil),
+                hasCommentKeyword = optComment.isDefined
               )
             )
           case r: Parsed.Failure =>

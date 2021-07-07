@@ -1,9 +1,8 @@
 package dev.vgerasimov.scorg
 
-import context.OrgContext
-
 import fastparse._
 
+/** Generic suite for testing Org parsers. */
 trait ParserCheckSuite extends munit.ScalaCheckSuite {
 
   protected lazy val ctx: OrgContext = OrgContext.defaultCtx

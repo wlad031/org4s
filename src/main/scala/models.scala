@@ -1,106 +1,93 @@
 package dev.vgerasimov.scorg
 
-import models.elements.Planning
-
 object models {
 
+  /** Main entity representing entire Org document.
+    *
+    * @param elements contains any content written before the first headline of the document
+    * @param sections list of all document's highest-level sections
+    */
   case class Document(elements: List[Element], sections: List[Section])
 
+  /** Represents [[https://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections Org's headline]].
+    *
+    * @param level number of asterisks (`*`) headline starts with
+    * @param keyword optional "to-do" keyword, can be one of [[OrgContext.todoKeywords]]
+    * @param priority optional priority cookie
+    * @param title optional headline title
+    * @param tags list of tags attached to the headline
+    * @param hasCommentKeyword indicates whether headline has "COMMENT" keyword or not
+    */
   case class Headline(
-    stars: Headline.Stars,
+    level: Int,
     keyword: Option[Headline.Keyword] = None,
     priority: Option[Headline.Priority] = None,
     title: Option[Headline.Title] = None,
-    tags: Option[Headline.Tags] = None,
-    isComment: Boolean = false
+    tags: List[String] = Nil,
+    hasCommentKeyword: Boolean = false
   ) {
-    // TODO: refactor
-    override def toString: String = {
-      val sb = new StringBuilder(stars.toString)
-      def appendSome[A](o: Option[A]): Unit =
-        o match {
-          case Some(value) => sb.append(" ").append(value)
-          case None        =>
-        }
-      appendSome(keyword)
-      appendSome(priority)
-      if (isComment) {
-        sb.append(" COMMENT")
-      }
-      appendSome(title)
-      appendSome(tags)
-      sb.toString()
-    }
+    require(level > 0, "Headline level cannot be less than 1")
   }
 
+  /** Contains [[Headline]]'s inner models. */
   object Headline {
+
+    /** Represents headline "to-do" keyword. Can be one of [[OrgContext.todoKeywords]]. */
     sealed trait Keyword
     object Keyword {
-      case class Todo(value: String) extends Keyword {
-        override def toString: String = value
-      }
-
-      case class Done(value: String) extends Keyword {
-        override def toString: String = value
-      }
+      case class Todo(value: String) extends Keyword
+      case class Done(value: String) extends Keyword
     }
 
-    case class Priority(value: Char) {
-      override def toString: String = s"[#$value]"
-    }
+    /** Represents headline priority cookie. */
+    case class Priority(value: Char)
 
-    case class Tags(tags: List[String]) {
-      require(tags.nonEmpty, "List of tags cannot be empty")
-      override def toString: String = tags.mkString(start = ":", sep = ":", end = ":")
-    }
-
-    case class Title(contents: List[Title.Content]) {
-      override def toString: String = contents.mkString
-    }
-
+    /** Represents headline title. */
+    case class Title(contents: List[Title.Content])
     object Title {
-      def apply(s: String): Title = new Title(List(objects.Text(s)))
-      def apply(contents: Content*): Title = new Title(contents.toList)
 
-      def withTextFold(contents: Seq[Content]): Title =
-        Title(
-          contents
-            .foldLeft[List[Content]](Nil)((ls, item) =>
-              ls match {
-                case Nil => List(item)
-                case head :: tail =>
-                  (item, head) match {
-                    case (t1: objects.Text, t2: objects.Text) => (t2 ++ t1) :: tail
-                    case (t1, t2)                             => t1 :: t2 :: tail
-                  }
-              }
-            )
-            .reverse
-        )
+      /** Creates [[Title]] from the given string. */
+      def apply(text: String): Title = new Title(List(objects.Text(text)))
 
+      /** Represents any content headline title can contain. */
       sealed trait Content
-    }
-
-    case class Stars(n: Int) {
-      require(n > 0, "The number of stars cannot be less than 1")
-      override def toString: String = "*".repeat(n)
     }
   }
 
+  /** Represents a section of Org document.
+    *
+    * @param headline mandatory headline of the section
+    * @param elements contains all content written before the first subsection of the section
+    * @param childSections contains all direct subsections of the section
+    * @param planning optional section's planning info
+    * @param propertyDrawer optional section's property drawer
+    */
   case class Section(
     headline: Headline,
     elements: List[Element] = Nil,
     childSections: List[Section] = Nil,
     planning: Option[Planning] = None,
-    propertyDrawer: Option[PropertyDrawer] = None
+    propertyDrawer: Option[greater_elements.PropertyDrawer] = None
   )
 
-  case class PropertyDrawer(nodes: List[elements.NodeProperty])
+  // TODO: move under elements object
+  //  it is not straightforward because for some reason compilation gets failed
+  case class Planning(info: List[Planning.Info]) extends Element
+  object Planning {
+    sealed trait Info
+    object Info {
+      import objects.Timestamp
 
-  /** Base type for all Org greater elements. */
+      case class Deadline(timestamp: Timestamp) extends Info
+      case class Scheduled(timestamp: Timestamp) extends Info
+      case class Closed(timestamp: Timestamp) extends Info
+    }
+  }
+
+  /** Base type for all [[https://orgmode.org/worg/dev/org-syntax.html#Greater_Elements Org greater elements]]. */
   sealed trait GreaterElement extends Element
 
-  /** Base type for all Org elements. */
+  /** Base type for all [[https://orgmode.org/worg/dev/org-syntax.html#Elements Org elements]]. */
   sealed trait Element
 
   /** Base type for all [[https://orgmode.org/worg/dev/org-syntax.html#Objects Org objects]]. */
@@ -109,11 +96,12 @@ object models {
   /** Contains implementations for [[GreaterElement]]s. */
   object greater_elements {
 
-    case class Table(rows: List[elements.TableRow], formulas: List[elements.Keyword.TableFormula])
-        extends GreaterElement {
-      def + (that: elements.TableRow): Table = Table(rows ++ List(that), formulas)
-      def + (formula: elements.Keyword.TableFormula): Table = Table(rows, formulas ++ List(formula))
-    }
+    case class PropertyDrawer(nodes: List[elements.NodeProperty]) extends GreaterElement
+
+    case class Table(
+      rows: List[elements.TableRow],
+      formulas: List[elements.Keyword.TableFormula]
+    ) extends GreaterElement
 
     sealed trait PlainList extends GreaterElement
     object PlainList {
@@ -193,35 +181,10 @@ object models {
       case class Line(value: String)
     }
 
-    sealed trait TableRow {
-      import elements.Keyword.TableFormula
-      import greater_elements.Table
-
-      def + (that: TableRow): Table = Table(List(this, that), Nil)
-      def + (formula: TableFormula): Table = Table(List(this), List(formula))
-
-      def asTable: Table = Table(List(this), Nil)
-    }
-
+    sealed trait TableRow
     object TableRow {
-      import objects.TableCell
-
       case object TableSep extends TableRow
-      case class TableRowCells(cells: List[TableCell]) extends TableRow {
-        def | (cell: TableCell): TableRowCells = TableRowCells(cells ++ List(cell))
-      }
-    }
-
-    case class Planning(info: List[Planning.Info])
-    object Planning {
-      sealed trait Info
-      object Info {
-        import objects.Timestamp
-
-        case class Deadline(timestamp: Timestamp) extends Info
-        case class Scheduled(timestamp: Timestamp) extends Info
-        case class Closed(timestamp: Timestamp) extends Info
-      }
+      case class TableRowCells(cells: List[objects.TableCell]) extends TableRow
     }
 
     case class NodeProperty(name: String, value: Option[String] = None) extends Element
@@ -620,11 +583,7 @@ object models {
       }
     }
 
-    case class TableCell(value: String) {
-      import elements.TableRow.TableRowCells
-
-      def | (that: TableCell): TableRowCells = TableRowCells(List(this, that))
-    }
+    case class TableCell(value: String)
 
     case class Target(target: String)
     case class RadioTarget(contents: String)

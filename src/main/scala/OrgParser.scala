@@ -1,8 +1,7 @@
 package dev.vgerasimov.scorg
 
-import context._
 import models._
-import models.elements.{ EmptyLines, Paragraph, Planning }
+import models.elements.{ EmptyLines, Paragraph }
 import models.greater_elements.PlainList
 import models.objects._
 import ops.{ foldParagraphs, foldTexts }
@@ -12,16 +11,15 @@ import fastparse.{ End, _ }
 
 class OrgParser(implicit ctx: OrgContext) {
 
-  def eol[_ : P]: P[Unit] = CharIn("\n\r")
-  def eolOrEnd[_ : P]: P[Unit] = eol | End
-
-  def anyNotIn[_ : P](string: String, min: Int = 1): P[String] =
+  private def eol[_ : P]: P[Unit] = CharIn("\n\r")
+  private def eolOrEnd[_ : P]: P[Unit] = eol | End
+  private def anyNotIn[_ : P](string: String, min: Int = 1): P[String] =
     CharsWhile(c => !string.contains(c), min).!
-  def anyNotNL[_ : P]: P[String] = anyNotIn("\n")
-  def s[_ : P]: P[Unit] = CharIn("\t ").rep(1)
-  def digit[_ : P]: P[Unit] = CharIn("0-9")
+  private def anyNotNL[_ : P]: P[String] = anyNotIn("\n")
+  private def s[_ : P]: P[Unit] = CharIn("\t ").rep(1)
+  private def digit[_ : P]: P[Unit] = CharIn("0-9")
 
-  object timestamp {
+  private[scorg] object timestamp {
     import models.objects.Timestamp.Date._
     import models.objects.Timestamp.Time._
     import models.objects.Timestamp._
@@ -145,20 +143,7 @@ class OrgParser(implicit ctx: OrgContext) {
       )
   }
 
-  def duration[_ : P]: P[Duration] =
-    ("=>" ~ s ~ digit.rep(1).! ~ ":" ~ digit.rep(exactly = 2).!)
-      .map({ case (h, m) => (h.toInt, m.toInt) })
-      .map({ case (h, m) => Duration(h, m) })
-
-  def clock[_ : P]: P[Clock] =
-    "CLOCK:" ~ s.? ~ (
-      timestamp.inactiveTimestamp.map(Clock.Simple.apply)
-      | (timestamp.inactiveTimestampRange ~ s ~ duration).map({
-        case (tr, d) => Clock.WithDuration(tr, d)
-      })
-    )
-
-  object planning {
+  private[scorg] object planning {
     private def info[A <: Planning.Info, _ : P](keyword: String, f: Timestamp => A): P[A] =
       (s.rep ~ P(keyword) ~ ": " ~ timestamp.timestamp ~ eolOrEnd).map(f)
 
@@ -173,10 +158,7 @@ class OrgParser(implicit ctx: OrgContext) {
       (deadlineInfo | scheduledInfo | closedInfo).rep(1).map(_.toList).map(Planning.apply)
   }
 
-  def lineBreak[_ : P]: P[LineBreak.type] =
-    ("""\\""" ~ CharIn("\t ").rep ~ eolOrEnd).map(_ => LineBreak)
-
-  object keyword {
+  private[scorg] object keyword {
     import elements.Keyword._
 
     private def key[A, _ : P](keyParser: => P[A]): P[A] = s.? ~ "#+" ~ keyParser ~ ":" ~ s.?
@@ -233,7 +215,7 @@ class OrgParser(implicit ctx: OrgContext) {
       } yield GenericKeyword(k, v)
   }
 
-  object table {
+  private[scorg] object table {
     import models.elements.TableRow
     import models.elements.TableRow._
     import models.greater_elements.Table
@@ -257,7 +239,7 @@ class OrgParser(implicit ctx: OrgContext) {
     def tableCell[_ : P]: P[TableCell] = anyNotIn("\n|").map(s => TableCell(s.trim))
   }
 
-  object target {
+  private[scorg] object target {
     import models.objects.{ RadioTarget, Target }
 
     def radioTarget[_ : P]: P[RadioTarget] =
@@ -269,7 +251,7 @@ class OrgParser(implicit ctx: OrgContext) {
         .map(Target.apply)
   }
 
-  object markup {
+  private[scorg] object markup {
 
     import models.objects.{ Marker, TextMarkup }
 
@@ -304,17 +286,7 @@ class OrgParser(implicit ctx: OrgContext) {
         })
   }
 
-  private[scorg] def anyObjectsWhileNot[_ : P](s: String): P[List[OrgObject]] =
-    (timestamp.timestamp | markup.textMarkup | (!s ~ AnyChar.!.map(Text.apply)))
-      .rep(1)
-      .map(foldTexts[OrgObject])
-
-  private[scorg] def anyObjects[_ : P]: P[List[OrgObject]] =
-    (!headline.headline() ~ (timestamp.timestamp | markup.textMarkup | AnyChar.!.map(Text.apply)))
-      .rep(1)
-      .map(foldTexts[OrgObject])
-
-  object link {
+  private[scorg] object link {
     import models.objects.Link
     import models.objects.Link._
 
@@ -352,17 +324,19 @@ class OrgParser(implicit ctx: OrgContext) {
       import models.objects.Link.PlainLink
 
       private def path2[_ : P]: P[String] =
-        ((!(eol | CharIn("(", ")", "<", ">", " ", "\t")) ~ AnyChar).rep(1).!)
+        (!(eol | CharIn("(", ")", "<", ">", " ", "\t")) ~ AnyChar).rep(1).!
 
       def plainLink[_ : P]: P[PlainLink] =
-        (linkProtocol ~ ":" ~ "//".? ~ path2).map({ case (protocol, path2) => PlainLink(protocol, path2) })
+        (linkProtocol ~ ":" ~ "//".? ~ path2).map({
+          case (protocol, path2) => PlainLink(protocol, path2)
+        })
     }
 
     def link[_ : P]: P[Link] =
       regular.regularLink | plain.plainLink
   }
 
-  object cookies {
+  private[scorg] object cookies {
     import models.objects.StatCookie
 
     def emptyPercentCookie[_ : P]: P[StatCookie.EmptyPercent.type] =
@@ -387,48 +361,47 @@ class OrgParser(implicit ctx: OrgContext) {
       emptyPercentCookie | emptyFractionalCookie | percentCookie | fractionalCookie
   }
 
-  object headline {
+  private[scorg] object headline {
     import models.Headline._
 
-    def stars[_ : P](fromLevel: Int = 1): P[Stars] =
-      "*".rep(min = fromLevel, max = ctx.inlineTaskMinLevel - 1).!.map(s => Stars(s.length))
+    private[scorg] def stars[_ : P](fromLevel: Int = 1): P[Int] =
+      "*".rep(min = fromLevel, max = ctx.inlineTaskMinLevel - 1).!.map(_.length)
 
-    def priority[_ : P]: P[Priority] =
+    private[scorg] def priority[_ : P]: P[Priority] =
       ("[#" ~ CharIn("A-Z").! ~ "]").map(s => s.toList.head).map(Priority)
 
-    def commentH[_ : P]: P[Unit] = P(ctx.headlineComment)
+    private[scorg] def commentH[_ : P]: P[Unit] = P(ctx.headlineComment)
 
     def keyword[_ : P]: P[Keyword] =
-      ctx.todoKeywords._1
+      ctx.todoKeywords.todo
         .map(s => P(s).!.map(Keyword.Todo.apply))
-        .reduce(_ | _) | ctx.todoKeywords._2
+        .reduce(_ | _) | ctx.todoKeywords.done
         .map(s => P(s).!.map(Keyword.Done.apply))
         .reduce(_ | _)
 
-    def tags[_ : P]: P[Tags] =
+    def tags[_ : P]: P[List[String]] =
       (":" ~ CharIn("a-zA-Z0-9%@#_").rep(1).!.rep(min = 1, sep = ":") ~ ":")
         .map(_.toList)
-        .map(Tags)
 
     def title[_ : P]: P[Title] =
       (
         timestamp.timestamp
         | markup.textMarkup
         | cookies.statCookie
-        | (!((s.? ~ eol) | (s ~ tags)) ~ AnyChar.!.map(Text.apply))
+        | (!(eol | tags) ~ AnyChar.!.map(Text.apply))
       ).rep
-        .map(Title.withTextFold)
+        .map(_.toList)
+        .map(foldTexts[Title.Content])
+        .map(ls => Title(ls))
 
-    def headline[_ : P](
-      fromLevel: Int = 1
-    ): P[Headline] =
+    def headline[_ : P](fromLevel: Int = 1): P[Headline] =
       (
         stars(fromLevel)
         ~ (s ~ keyword).?
         ~ (s ~ priority).?
         ~ (s ~ commentH.!).?
         ~ (s ~ title).?
-        ~ (s ~ tags).?
+        ~ tags.?
         ~ s.?
         ~ eolOrEnd
       ).map({
@@ -438,13 +411,13 @@ class OrgParser(implicit ctx: OrgContext) {
             keyword,
             priority,
             title,
-            tags,
-            isComment = comment.isDefined
+            tags.getOrElse(Nil),
+            hasCommentKeyword = comment.isDefined
           )
       })
   }
 
-  object plainList {
+  private[scorg] object plainList {
     import models.greater_elements.PlainList._
 
     def counter[_ : P]: P[Counter] = (digit.rep(1) | CharIn("a-zA-Z")).!.map(Counter.apply)
@@ -474,7 +447,7 @@ class OrgParser(implicit ctx: OrgContext) {
       timestamp.timestamp | link.link | markup.textMarkup | (!eol ~ singleCharText)
 
     private def anyItemElement[_ : P](minIndent: Int, maxIndent: Int): P[Element] =
-      table.table | plainList(minIndent, maxIndent) | emptyLines(Some(1)) | paragraph
+      table.table | plainList(minIndent, maxIndent) | emptyLines(Some(1)) | paragraph.paragraph
 
     def item[_ : P](minIndent: Int, maxIndent: Int): P[Item] =
       for {
@@ -493,10 +466,12 @@ class OrgParser(implicit ctx: OrgContext) {
       }
 
     def plainList[_ : P](minIndent: Int = 0, maxIndent: Int = 32): P[PlainList] =
-      (!headline.headline() ~ item(minIndent, maxIndent)).rep(1).map(_.toList).map(PlainList.Simple.apply)
+      (!headline
+        .headline() ~ item(minIndent, maxIndent)).rep(1).map(_.toList).map(PlainList.Simple.apply)
   }
 
-  object propertyDrawer {
+  private[scorg] object propertyDrawer {
+    import models.greater_elements.PropertyDrawer
     import models.elements.NodeProperty
 
     private def nodePropertyName[_ : P]: P[String] =
@@ -517,39 +492,55 @@ class OrgParser(implicit ctx: OrgContext) {
         .map(PropertyDrawer.apply)
   }
 
+  private[scorg] object paragraph {
+    private def anyParagraphObject[_ : P]: P[OrgObject] =
+      timestamp.timestamp | link.link | markup.textMarkup | lineBreak | (!eol ~ singleCharText)
+
+    def paragraph[_ : P]: P[Paragraph] =
+      (
+        (!headline.headline() ~ anyParagraphObject).rep(1)
+        ~ (End.map(_ => Text("")) | eol.!.map(Text.apply))
+      )
+        .map({ case (ls, last) => ls.toList ++ List(last) })
+        .map(foldTexts[OrgObject])
+        .map(Paragraph.apply)
+  }
+
+  private[scorg] def lineBreak[_ : P]: P[LineBreak.type] =
+    ("""\\""" ~ CharIn("\t ").rep ~ eolOrEnd).map(_ => LineBreak)
+
+  private[scorg] def duration[_ : P]: P[Duration] =
+    ("=>" ~ s ~ digit.rep(1).! ~ ":" ~ digit.rep(exactly = 2).!)
+      .map({ case (h, m) => (h.toInt, m.toInt) })
+      .map({ case (h, m) => Duration(h, m) })
+
+  private[scorg] def clock[_ : P]: P[Clock] =
+    "CLOCK:" ~ s.? ~ (
+      timestamp.inactiveTimestamp.map(Clock.Simple.apply)
+      | (timestamp.inactiveTimestampRange ~ s ~ duration).map({
+        case (tr, d) => Clock.WithDuration(tr, d)
+      })
+    )
+
   private def singleCharText[_ : P]: P[Text] = AnyChar.!.map(Text.apply)
 
-  private def anyParagraphObject[_ : P]: P[OrgObject] =
-    timestamp.timestamp | link.link | markup.textMarkup | lineBreak | (!eol ~ singleCharText)
-
-  def paragraph[_ : P]: P[Paragraph] =
-    (
-      (!headline.headline() ~ anyParagraphObject).rep(1)
-      ~ (End.map(_ => Text("")) | eol.!.map(Text.apply))
-    )
-      .map({ case (ls, last) => ls.toList ++ List(last) })
-      .map(foldTexts[OrgObject])
-      .map(Paragraph.apply)
-
   private def anySectionElement[_ : P]: P[Element] =
-    keyword.keyword | table.table | plainList.plainList() | emptyLines() | paragraph
+    keyword.keyword | table.table | plainList.plainList() | emptyLines() | paragraph.paragraph
 
-  def emptyLines[_ : P](max: Option[Int] = None): P[EmptyLines] =
+  private def emptyLines[_ : P](max: Option[Int] = None): P[EmptyLines] =
     max
       .map(v => eol.rep(min = 1, max = v))
       .getOrElse(eol.rep(1))
       .!
       .map(s => EmptyLines(s.length))
 
-  def section[_ : P](
-    fromLevel: Int = 1
-  ): P[Section] =
+  private[scorg] def section[_ : P](fromLevel: Int = 1): P[Section] =
     for {
       hl       <- headline.headline(fromLevel)./
       planning <- planning.planning.?./
       pDrawer  <- propertyDrawer.propertyDrawer.?./
       elements <- anySectionElement.rep./
-      childs   <- section(hl.stars.n + 1).rep
+      childs   <- section(hl.level + 1).rep
     } yield {
       Section(hl, foldParagraphs[Element](elements), childs.toList, planning, pDrawer)
     }
@@ -558,5 +549,4 @@ class OrgParser(implicit ctx: OrgContext) {
     (Start ~ anySectionElement.rep ~/ section().rep ~ End).map({
       case (elements, sections) => Document(elements.toList, sections.toList)
     })
-
 }
