@@ -165,7 +165,9 @@ class SectionParsersTest extends ParserCheckSuite {
           Some(Keyword.Done("DONE")),
           None,
           Some(
-            Title(List(Text("This is the"), TextMarkup.verbatim(" ", "heading"), Text(" with tag")))
+            Title(
+              List(Text("This is the"), TextMarkup.verbatim(" ", "heading"), Text(" with tag "))
+            )
           ),
           List("tag")
         ),
@@ -236,7 +238,7 @@ class SectionParsersTest extends ParserCheckSuite {
               Section(
                 Headline(
                   4,
-                  title = Some(Title("Subsubheading")),
+                  title = Some(Title("Subsubheading ")),
                   tags = List("fun", "lol")
                 ),
                 elements = List(

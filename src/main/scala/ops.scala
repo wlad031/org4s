@@ -38,7 +38,7 @@ object ops {
     def sep: TableSep.type = TableSep
   }
 
-  private def fold[A >: B, B : ClassTag](objects: Seq[A], op: (B, B) => B): List[A] = {
+  private def fold[A >: B, B : ClassTag](objects: List[A], op: (B, B) => B): List[A] = {
     def aIsB(a: A): Boolean = classTag[B].runtimeClass.isInstance(a)
     objects
       .foldLeft[List[A]](Nil)((ls, item) =>
@@ -56,16 +56,13 @@ object ops {
       .reverse
   }
 
-  def foldTexts[A >: Text](objects: Seq[A]): List[A] = {
-    fold[A, Text](objects, _ ++ _)
-  }
+  def foldTexts[A >: Text](objects: List[A]): List[A] = fold[A, Text](objects, _ ++ _)
 
-  def foldParagraphs[A >: Paragraph](objects: Seq[A]): List[A] = {
+  def foldParagraphs[A >: Paragraph](objects: List[A]): List[A] =
     for {
       element <- fold[A, Paragraph](objects, _ ++ _)
     } yield element match {
       case Paragraph(objects) => Paragraph(foldTexts(objects))
       case _                  => element
     }
-  }
 }

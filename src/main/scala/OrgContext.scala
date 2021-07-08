@@ -35,5 +35,7 @@ object OrgContext {
   )
 
   /** Contains collections of valid "to-do" keywords. */
-  case class TodoKeywords(todo: Seq[String], done: Seq[String])
+  case class TodoKeywords(todo: Seq[String], done: Seq[String]) {
+    def contains(s: String): Boolean = todo.contains(s) || done.contains(s)
+  }
 }

@@ -274,6 +274,7 @@ class OrgParser(implicit ctx: OrgContext) {
                    | markup.textMarkup
                    | (!marker.toString ~ singleCharText))
                      .rep(1)
+                     .map(_.toList)
                      .map(foldTexts[TextMarkup.Content])
                  else
                    (!marker.toString ~ singleCharText)
@@ -299,6 +300,7 @@ class OrgParser(implicit ctx: OrgContext) {
 
     private def contentsWithoutLinks[_ : P]: P[Contents] =
       (!"]" ~ AnyChar.!.map(Text.apply)).rep
+        .map(_.toList)
         .map(foldTexts[OrgObject])
         .map(ls => Contents(ls))
 
@@ -370,14 +372,15 @@ class OrgParser(implicit ctx: OrgContext) {
     private[scorg] def priority[_ : P]: P[Priority] =
       ("[#" ~ CharIn("A-Z").! ~ "]").map(s => s.toList.head).map(Priority)
 
-    private[scorg] def commentH[_ : P]: P[Unit] = P(ctx.headlineComment)
+    private[scorg] def comment[_ : P]: P[Unit] = P(ctx.headlineComment)
 
+    // TODO: refactor
     def keyword[_ : P]: P[Keyword] =
-      ctx.todoKeywords.todo
-        .map(s => P(s).!.map(Keyword.Todo.apply))
-        .reduce(_ | _) | ctx.todoKeywords.done
-        .map(s => P(s).!.map(Keyword.Done.apply))
-        .reduce(_ | _)
+      (!(" " | eolOrEnd) ~ AnyChar)
+        .rep(1)
+        .!
+        .filter(ctx.todoKeywords.contains)
+        .map(s => if (ctx.todoKeywords.todo.contains(s)) Keyword.Todo(s) else Keyword.Done(s))
 
     def tags[_ : P]: P[List[String]] =
       (":" ~ CharIn("a-zA-Z0-9%@#_").rep(1).!.rep(min = 1, sep = ":") ~ ":")
@@ -399,7 +402,7 @@ class OrgParser(implicit ctx: OrgContext) {
         stars(fromLevel)
         ~ (s ~ keyword).?
         ~ (s ~ priority).?
-        ~ (s ~ commentH.!).?
+        ~ (s ~ comment.!).?
         ~ (s ~ title).?
         ~ tags.?
         ~ s.?
@@ -457,7 +460,7 @@ class OrgParser(implicit ctx: OrgContext) {
             ~ (counterSet ~ s).?
             ~ (checkbox ~ s).?
             ~ (tag ~ s).?
-            ~ anyItemObject.rep.map(foldTexts[Content])
+            ~ anyItemObject.rep.map(_.toList).map(foldTexts[Content])
             ~ (End.map(_ => Nil) | (eol ~ anyItemElement(lvl + 1, maxIndent).rep))
         )
       } yield t match {
@@ -471,8 +474,8 @@ class OrgParser(implicit ctx: OrgContext) {
   }
 
   private[scorg] object propertyDrawer {
-    import models.greater_elements.PropertyDrawer
     import models.elements.NodeProperty
+    import models.greater_elements.PropertyDrawer
 
     private def nodePropertyName[_ : P]: P[String] =
       ":" ~ (!("END" | CharIn("+:") | eolOrEnd) ~ AnyChar).rep(1).! ~ "+".? ~ ":"
@@ -542,7 +545,7 @@ class OrgParser(implicit ctx: OrgContext) {
       elements <- anySectionElement.rep./
       childs   <- section(hl.level + 1).rep
     } yield {
-      Section(hl, foldParagraphs[Element](elements), childs.toList, planning, pDrawer)
+      Section(hl, foldParagraphs[Element](elements.toList), childs.toList, planning, pDrawer)
     }
 
   def document[_ : P]: P[Document] =
