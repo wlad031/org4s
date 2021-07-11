@@ -162,7 +162,7 @@ class SectionParsersTest extends ParserCheckSuite {
       Section(
         headline = Headline(
           2,
-          Some(Keyword.Done("DONE")),
+          Some(Keyword.Done("DONE", Keyword.KWSet(List("TODO"), List("DONE")))),
           None,
           Some(
             Title(

@@ -35,8 +35,22 @@ object models {
     /** Represents headline "to-do" keyword. Can be one of [[OrgContext.todoKeywords]]. */
     sealed trait Keyword
     object Keyword {
-      case class Todo(value: String) extends Keyword
-      case class Done(value: String) extends Keyword
+
+      case class Todo(value: String, set: KWSet) extends Keyword {
+        require(set.todo.contains(value), s"Todo keywords set ${set.todo} doesn't contain $value")
+      }
+
+      case class Done(value: String, set: KWSet) extends Keyword {
+        require(set.done.contains(value), s"Todo keywords set ${set.done} doesn't contain $value")
+      }
+
+      case class KWSet(todo: List[String], done: List[String]) {
+
+        def mapStringToKeyword(s: String): Keyword =
+          if (todo.contains(s)) Todo(s, this)
+          else if (done.contains(s)) Done(s, this)
+          else throw new IllegalArgumentException(s"Todo keywords set $this doesn't contain $s")
+      }
     }
 
     /** Represents headline priority cookie. */
@@ -155,6 +169,7 @@ object models {
     object Keyword {
       case class TableFormula(formulas: String) extends Keyword
       case class Call(value: String) extends Keyword
+      case class Todo(todoKeywords: List[String], doneKeywords: List[String]) extends Keyword
 
       sealed trait Affiliated extends Keyword
       object Affiliated {

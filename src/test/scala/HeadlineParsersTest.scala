@@ -137,7 +137,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
       starsGen,
       Gen.option(
         Gen.oneOf(
-          OrgContext.default.todoKeywords.todo ++ OrgContext.default.todoKeywords.done
+          OrgContext.default.todoKeywords.allValues
         )
       ),
       Gen.option(priorityGen),
@@ -166,9 +166,15 @@ class HeadlineParsersTest extends ParserCheckSuite {
               value,
               Headline(
                 n,
-                optKeyword.map(s =>
-                  if (OrgContext.default.todoKeywords.todo.contains(s)) Keyword.Todo(s)
-                  else Keyword.Done(s)
+                optKeyword.flatMap(s =>
+                  OrgContext.default.todoKeywords.sets
+                    .find(set => set.todo.contains(s))
+                    .map(set => Keyword.Todo(s, Keyword.KWSet(set.todo, set.done)))
+                    .orElse(
+                      OrgContext.default.todoKeywords.sets
+                        .find(set => set.done.contains(s))
+                        .map(set => Keyword.Done(s, Keyword.KWSet(set.todo, set.done)))
+                    )
                 ),
                 optPriority.map(_._1).map(Priority),
                 optTitle.map(_ + " ").map(Title.apply),

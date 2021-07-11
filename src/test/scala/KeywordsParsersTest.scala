@@ -21,6 +21,38 @@ class KeywordsParsersTest extends ParserCheckSuite {
     )
   }
 
+  test("TODO should parse todo keyword with TODO | DONE") {
+    checkParser(
+      parser.keyword.todo(_),
+      """#+TODO: TODO | DONE""",
+      Todo(List("TODO"), List("DONE"))
+    )
+  }
+
+  test("TODO should parse todo keyword with TODO WORKING DONE") {
+    checkParser(
+      parser.keyword.todo(_),
+      """#+TODO: TODO WORKING DONE""",
+      Todo(List("TODO", "WORKING"), List("DONE"))
+    )
+  }
+
+  test("TODO should parse todo keyword with TODO WORKING | DONE CANCELLED") {
+    checkParser(
+      parser.keyword.todo(_),
+      """#+TODO: TODO WORKING | DONE CANCELLED""",
+      Todo(List("TODO", "WORKING"), List("DONE", "CANCELLED"))
+    )
+  }
+
+  test("TODO should parse todo keyword with | CANCELLED") {
+    checkParser(
+      parser.keyword.todo(_),
+      """#+TODO: | CANCELLED""",
+      Todo(Nil, List("CANCELLED"))
+    )
+  }
+
   test("AFFILIATED KEYWORD should parse results keyword with no optional") {
     checkParser(
       parser.keyword.affiliatedKeyword(_),

@@ -1,7 +1,7 @@
 package dev.vgerasimov.scorg
 
 import models._
-import models.elements.{ EmptyLines, Paragraph }
+import models.elements.{ EmptyLines, Keyword, Paragraph }
 import models.greater_elements.PlainList
 import models.objects._
 import ops.{ foldParagraphs, foldTexts }
@@ -200,8 +200,26 @@ class OrgParser(implicit ctx: OrgContext) {
     def call[_ : P]: P[Call] =
       (key(P("CALL")) ~ simpleValue).map(Call.apply)
 
+    def todo[_ : P]: P[Todo] = {
+      def word: P[String] = CharIn("A-Za-z").rep(1).!
+      (
+        key(P("TODO"))
+        ~ ((s.? ~ word).rep(1).? ~ (s.? ~ "|" ~ (s ~ word).rep(1)).?)
+      )
+        .filter({ case (o1, o2) => o1.isDefined || o2.isDefined })
+        .map({
+          case (Some(todoLs), Some(doneLs)) => Todo(todoLs.toList, doneLs.toList)
+          case (Some(ls), None)             => Todo(ls.slice(0, ls.size - 1).toList, List(ls.last))
+          case (None, Some(ls))             => Todo(Nil, ls.toList)
+          case (None, None) =>
+            sys.error(
+              "Unexpected state: thrown because matched case should have been filtered in previous .filter(..) call"
+            )
+        })
+    }
+
     private def genericKey[_ : P]: P[String] =
-      !(affiliatedKeyword | tableFormula | call) ~ key((!":" ~ AnyChar).rep.!)
+      !(affiliatedKeyword | tableFormula | call | todo) ~ key((!":" ~ AnyChar).rep.!)
 
     def keyword[_ : P]: P[GenericKeyword] =
       for {
@@ -210,7 +228,7 @@ class OrgParser(implicit ctx: OrgContext) {
           if (ctx.elementDocumentProperties.contains(k)) {
             (content.rep(1) ~ eolOrEnd).map(_.toList).map(foldTexts[Content])
           } else {
-            ((!eol ~ AnyChar).rep(1) ~ eolOrEnd).!.map(Text.apply).map(List(_))
+            ((!eolOrEnd ~ AnyChar).rep(1).! ~ eolOrEnd).map(Text.apply).map(List(_))
           }
       } yield GenericKeyword(k, v)
   }
@@ -375,12 +393,16 @@ class OrgParser(implicit ctx: OrgContext) {
     private[scorg] def comment[_ : P]: P[Unit] = P(ctx.headlineComment)
 
     // TODO: refactor
-    def keyword[_ : P]: P[Keyword] =
+    def keyword[_ : P]: P[Headline.Keyword] =
       (!(" " | eolOrEnd) ~ AnyChar)
         .rep(1)
         .!
-        .filter(ctx.todoKeywords.contains)
-        .map(s => if (ctx.todoKeywords.todo.contains(s)) Keyword.Todo(s) else Keyword.Done(s))
+        .map(value => (value, ctx.todoKeywords.findSet(value)))
+        .filter({ case (_, setOpt) => setOpt.isDefined })
+        .map({
+          case (value, setOpt) =>
+            Headline.Keyword.KWSet(setOpt.get.todo, setOpt.get.done).mapStringToKeyword(value)
+        })
 
     def tags[_ : P]: P[List[String]] =
       (":" ~ CharIn("a-zA-Z0-9%@#_").rep(1).!.rep(min = 1, sep = ":") ~ ":")
@@ -528,7 +550,11 @@ class OrgParser(implicit ctx: OrgContext) {
   private def singleCharText[_ : P]: P[Text] = AnyChar.!.map(Text.apply)
 
   private def anySectionElement[_ : P]: P[Element] =
-    keyword.keyword | table.table | plainList.plainList() | emptyLines() | paragraph.paragraph
+    anyDocumentSectionElement | keyword.todo
+
+  private def anyDocumentSectionElement[_ : P]: P[Element] =
+    keyword.keyword | table.table | plainList
+      .plainList() | emptyLines() | paragraph.paragraph
 
   private def emptyLines[_ : P](max: Option[Int] = None): P[EmptyLines] =
     max
@@ -539,17 +565,37 @@ class OrgParser(implicit ctx: OrgContext) {
 
   private[scorg] def section[_ : P](fromLevel: Int = 1): P[Section] =
     for {
-      hl       <- headline.headline(fromLevel)./
-      planning <- planning.planning.?./
-      pDrawer  <- propertyDrawer.propertyDrawer.?./
-      elements <- anySectionElement.rep./
-      childs   <- section(hl.level + 1).rep
+      headline       <- headline.headline(fromLevel)./
+      planning       <- planning.planning.?./
+      propertyDrawer <- propertyDrawer.propertyDrawer.?./
+      elements       <- anySectionElement.rep./
+      childSections  <- section(headline.level + 1).rep
     } yield {
-      Section(hl, foldParagraphs[Element](elements.toList), childs.toList, planning, pDrawer)
+      Section(
+        headline,
+        foldParagraphs[Element](elements.toList),
+        childSections.toList,
+        planning,
+        propertyDrawer
+      )
     }
 
-  def document[_ : P]: P[Document] =
-    (Start ~ anySectionElement.rep ~/ section().rep ~ End).map({
-      case (elements, sections) => Document(elements.toList, sections.toList)
-    })
+  def document[_ : P]: P[Document] = {
+    for {
+      elements <- Start ~ anyDocumentSectionElement.rep
+      newParser = new OrgParser()(
+        ctx.copy(todoKeywords =
+          elements
+            .filter(_.isInstanceOf[Keyword.Todo])
+            .map(_.asInstanceOf[Keyword.Todo])
+            .map(keyword =>
+              OrgContext.TodoKeywords.KWSet(keyword.todoKeywords, keyword.doneKeywords)
+            )
+            .map(set => OrgContext.TodoKeywords(List(set)))
+            .foldLeft(ctx.todoKeywords)(_ ++ _)
+        )
+      )
+      sections <- newParser.section().rep ~ End
+    } yield Document(elements.toList, sections.toList)
+  }
 }

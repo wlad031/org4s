@@ -17,7 +17,9 @@ object OrgContext {
   /** Contains default values for all fields of the [[OrgContext]]. */
   object default {
     val headlineComment: String = "COMMENT"
-    val todoKeywords: TodoKeywords = TodoKeywords(Seq("TODO"), Seq("DONE"))
+    val todoKeywords: TodoKeywords = TodoKeywords(
+      List(TodoKeywords.KWSet(List("TODO"), List("DONE")))
+    )
     val archiveTag: String = "ARCHIVE"
     val linkTypes: Seq[String] = Seq("https", "http", "file")
     val inlineTaskMinLevel: Int = 15
@@ -35,7 +37,17 @@ object OrgContext {
   )
 
   /** Contains collections of valid "to-do" keywords. */
-  case class TodoKeywords(todo: Seq[String], done: Seq[String]) {
-    def contains(s: String): Boolean = todo.contains(s) || done.contains(s)
+  case class TodoKeywords(sets: List[TodoKeywords.KWSet]) {
+    def contains(s: String): Boolean = sets.exists(_.contains(s))
+    def findSet(s: String): Option[TodoKeywords.KWSet] = sets.find(_.contains(s))
+    def allValues: Seq[String] = sets.flatMap(set => set.todo ++ set.done)
+    def ++ (that: TodoKeywords): TodoKeywords =
+      TodoKeywords(this.sets ++ that.sets.filter(s => !this.sets.contains(s)))
+  }
+
+  object TodoKeywords {
+    case class KWSet(todo: List[String], done: List[String]) {
+      def contains(s: String): Boolean = todo.contains(s) || done.contains(s)
+    }
   }
 }
