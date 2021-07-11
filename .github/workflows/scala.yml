@@ -16,4 +16,10 @@ jobs:
         with:
           java-version: 11
       - name: Run sbt build
-        run: sbt clean update scalafmtCheck compile test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sbt clean update scalafmtCheck compile coverage test coverageReport
+      - name: Run codecov tool
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: bash <(curl -s https://codecov.io/bash)
