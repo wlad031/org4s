@@ -122,11 +122,11 @@ object models {
       case class Item(
         indentation: Int,
         bullet: Bullet,
-        checkbox: Option[Checkbox],
-        counterSet: Option[Counter],
-        tag: Option[String],
-        contents: List[Content],
-        elements: List[Element]
+        checkbox: Option[Checkbox] = None,
+        counterSet: Option[Counter] = None,
+        tag: Option[String] = None,
+        contents: List[Content] = Nil,
+        elements: List[Element] = Nil
       )
 
       case class Counter(value: String)

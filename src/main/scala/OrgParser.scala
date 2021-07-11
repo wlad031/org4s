@@ -472,27 +472,43 @@ class OrgParser(implicit ctx: OrgContext) {
       timestamp.timestamp | link.link | markup.textMarkup | (!eol ~ singleCharText)
 
     private def anyItemElement[_ : P](minIndent: Int, maxIndent: Int): P[Element] =
-      table.table | plainList(minIndent, maxIndent) | emptyLines(Some(1)) | paragraph.paragraph
+      (
+        table.table
+        | plainList(minIndent, maxIndent)
+        | emptyLines(Some(1))
+        | (!indentation(0, minIndent - 1) ~ paragraph.paragraph)
+      )
+
+    private def indentation[_ : P](minIndent: Int, maxIndent: Int): P[Int] =
+      P(" ".rep(min = minIndent, max = maxIndent) ~ !" ").!.map(_.length)
 
     def item[_ : P](minIndent: Int, maxIndent: Int): P[Item] =
       for {
-        lvl <- P(" ").rep(min = minIndent, max = maxIndent).!.map(_.length)
+        lvl    <- indentation(minIndent, maxIndent)
+        bullet <- charBullet | orderedBullet
         t <- (
-            (charBullet | orderedBullet)
-            ~ (counterSet ~ s).?
+            (counterSet ~ s).?
             ~ (checkbox ~ s).?
             ~ (tag ~ s).?
             ~ anyItemObject.rep.map(_.toList).map(foldTexts[Content])
-            ~ (End.map(_ => Nil) | (eol ~ anyItemElement(lvl + 1, maxIndent).rep))
+            ~ (
+              End.map(_ => None)
+              | (eol ~ anyItemElement(lvl + 1, maxIndent).rep
+                .map(_.toList)
+                .map(foldParagraphs[Element])
+                .?)
+            )
         )
       } yield t match {
-        case (bullet, counterSet, checkbox, tag, content, elements) =>
-          Item(lvl, bullet, checkbox, counterSet, tag, content, elements.toList)
+        case (counterSet, checkbox, tag, content, elements) =>
+          Item(lvl, bullet, checkbox, counterSet, tag, content, elements.getOrElse(Nil))
       }
 
-    def plainList[_ : P](minIndent: Int = 0, maxIndent: Int = 32): P[PlainList] =
-      (!headline
-        .headline() ~ item(minIndent, maxIndent)).rep(1).map(_.toList).map(PlainList.Simple.apply)
+    def plainList[_ : P](minIndent: Int = 0, maxIndent: Int = 48): P[PlainList] =
+      for {
+        head <- !headline.headline() ~ item(minIndent, maxIndent)
+        tail <- (!headline.headline() ~ item(head.indentation, maxIndent)).rep
+      } yield PlainList.Simple(head :: tail.toList)
   }
 
   private[scorg] object propertyDrawer {
@@ -558,7 +574,7 @@ class OrgParser(implicit ctx: OrgContext) {
 
   private def emptyLines[_ : P](max: Option[Int] = None): P[EmptyLines] =
     max
-      .map(v => eol.rep(min = 1, max = v))
+      .map(v => eol.rep(min = 1, max = v) ~ !eol)
       .getOrElse(eol.rep(1))
       .!
       .map(s => EmptyLines(s.length))
