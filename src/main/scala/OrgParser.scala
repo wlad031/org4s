@@ -414,10 +414,10 @@ class OrgParser(implicit ctx: OrgContext) {
         | markup.textMarkup
         | cookies.statCookie
         | (!(eol | tags) ~ AnyChar.!.map(Text.apply))
-      ).rep
+      ).rep(1)
         .map(_.toList)
         .map(foldTexts[Title.Content])
-        .map(ls => Title(ls))
+        .map(Title.apply)
 
     def headline[_ : P](fromLevel: Int = 1): P[Headline] =
       (
@@ -426,7 +426,7 @@ class OrgParser(implicit ctx: OrgContext) {
         ~ (s ~ priority).?
         ~ (s ~ comment.!).?
         ~ (s ~ title).?
-        ~ tags.?
+        ~ s.? ~ tags.?
         ~ s.?
         ~ eolOrEnd
       ).map({

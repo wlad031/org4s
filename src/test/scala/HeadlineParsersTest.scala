@@ -177,7 +177,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
                     )
                 ),
                 optPriority.map(_._1).map(Priority),
-                optTitle.map(_ + " ").map(Title.apply),
+                optTitle.map(t => optTags.map(_ => t + " ").getOrElse(t)).map(Title.apply),
                 optTags.getOrElse(Nil),
                 hasCommentKeyword = optComment.isDefined
               )
