@@ -4,7 +4,7 @@ import models._
 import models.elements.{ EmptyLines, Keyword, Paragraph }
 import models.greater_elements.PlainList
 import models.objects._
-import ops.{ foldParagraphs, foldTexts }
+import ops._
 
 import fastparse.NoWhitespace._
 import fastparse.{ End, _ }
@@ -566,11 +566,10 @@ class OrgParser(implicit ctx: OrgContext) {
   private def singleCharText[_ : P]: P[Text] = AnyChar.!.map(Text.apply)
 
   private def anySectionElement[_ : P]: P[Element] =
-    anyDocumentSectionElement | keyword.todo
+    keyword.keyword | table.table | plainList.plainList() | emptyLines() | paragraph.paragraph
 
   private def anyDocumentSectionElement[_ : P]: P[Element] =
-    keyword.keyword | table.table | plainList
-      .plainList() | emptyLines() | paragraph.paragraph
+    keyword.todo | anySectionElement
 
   private def emptyLines[_ : P](max: Option[Int] = None): P[EmptyLines] =
     max
