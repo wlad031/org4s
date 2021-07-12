@@ -9,7 +9,7 @@ import ops._
 import fastparse.NoWhitespace._
 import fastparse.{ End, _ }
 
-class OrgParser(implicit ctx: OrgContext) {
+class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
 
   private def eol[_ : P]: P[Unit] = CharIn("\n\r")
   private def eolOrEnd[_ : P]: P[Unit] = eol | End
@@ -598,7 +598,7 @@ class OrgParser(implicit ctx: OrgContext) {
   def document[_ : P]: P[Document] = {
     for {
       elements <- Start ~ anyDocumentSectionElement.rep
-      newParser = new OrgParser()(
+      newParser = new OrgParser(
         ctx.copy(todoKeywords =
           elements
             .filter(_.isInstanceOf[Keyword.Todo])

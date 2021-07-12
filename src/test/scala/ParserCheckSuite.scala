@@ -6,7 +6,7 @@ import fastparse._
 trait ParserCheckSuite extends munit.ScalaCheckSuite {
 
   protected lazy val ctx: OrgContext = OrgContext.defaultCtx
-  protected lazy val parser: OrgParser = new OrgParser()(ctx)
+  protected lazy val parser: OrgParser = new OrgParser(ctx)
 
   def checkParser[T](parser: P[_] => P[T], toParse: String, expected: => T): Unit =
     parse(toParse, parser) match {

@@ -27,7 +27,7 @@ object OrgContext {
   }
 
   /** Default instance of [[OrgContext]]. */
-  implicit val defaultCtx: OrgContext = OrgContext(
+  val defaultCtx: OrgContext = OrgContext(
     headlineComment = default.headlineComment,
     todoKeywords = default.todoKeywords,
     archiveTag = default.archiveTag,
