@@ -1,0 +1,45 @@
+#+TITLE: org4s - Scala Org Parser
+
+* Org data structure
+
+** Greater elements [1/8]
+
+- [ ] greater blocks
+- [ ] drawers and property drawers
+- [ ] dynamic blocks
+- [ ] footnote definitions
+- [ ] inlinetasks
+- [ ] plain lists and items
+- [ ] property drawers
+- [X] tables
+
+** Elements [2/11]
+
+- [X] table rows
+- [ ] node properties
+- [ ] blocks
+- [-] Babel call
+- [ ] clock, diary sexp and planning
+- [ ] comments
+- [ ] fixed width areas
+- [X] horizontal rules
+- [ ] keywords
+- [-] LaTeX environments
+- [ ] node properties
+- [ ] paragraphs
+
+** Objects [2/13]
+
+- [X] table cells
+- [X] timestamps
+- [ ] text markup
+- [X] statistics cookies
+- [ ] links
+- [X] line breaks
+- [ ] footnote references
+- [X] targets and radio targets
+- [-] macros
+- [-] entities and LaTeX Fragments
+- [-] export snippets
+- [-] inline Babel calls and Source Blocks
+- [-] subscript and superscript

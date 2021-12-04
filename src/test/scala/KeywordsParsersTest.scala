@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 import models.elements.Keyword._
 import models.objects.{ Text, TextMarkup }

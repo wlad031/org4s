@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 import models._
 import models.elements.{ EmptyLines, Keyword, Paragraph }
@@ -19,7 +19,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
   private def s[_ : P]: P[Unit] = CharIn("\t ").rep(1)
   private def digit[_ : P]: P[Unit] = CharIn("0-9")
 
-  private[scorg] object timestamp {
+  private[org4s] object timestamp {
     import models.objects.Timestamp.Date._
     import models.objects.Timestamp.Time._
     import models.objects.Timestamp._
@@ -143,7 +143,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       )
   }
 
-  private[scorg] object planning {
+  private[org4s] object planning {
     private def info[A <: Planning.Info, _ : P](keyword: String, f: Timestamp => A): P[A] =
       (s.rep ~ P(keyword) ~ ": " ~ timestamp.timestamp ~ eolOrEnd).map(f)
 
@@ -158,7 +158,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       (deadlineInfo | scheduledInfo | closedInfo).rep(1).map(_.toList).map(Planning.apply)
   }
 
-  private[scorg] object keyword {
+  private[org4s] object keyword {
     import elements.Keyword._
 
     private def key[A, _ : P](keyParser: => P[A]): P[A] = s.? ~ "#+" ~ keyParser ~ ":" ~ s.?
@@ -233,7 +233,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       } yield GenericKeyword(k, v)
   }
 
-  private[scorg] object table {
+  private[org4s] object table {
     import models.elements.TableRow
     import models.elements.TableRow._
     import models.greater_elements.Table
@@ -257,7 +257,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
     def tableCell[_ : P]: P[TableCell] = anyNotIn("\n|").map(s => TableCell(s.trim))
   }
 
-  private[scorg] object target {
+  private[org4s] object target {
     import models.objects.{ RadioTarget, Target }
 
     def radioTarget[_ : P]: P[RadioTarget] =
@@ -269,7 +269,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
         .map(Target.apply)
   }
 
-  private[scorg] object markup {
+  private[org4s] object markup {
 
     import models.objects.{ Marker, TextMarkup }
 
@@ -305,7 +305,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
         })
   }
 
-  private[scorg] object link {
+  private[org4s] object link {
     import models.objects.Link
     import models.objects.Link._
 
@@ -356,7 +356,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       regular.regularLink | plain.plainLink
   }
 
-  private[scorg] object cookies {
+  private[org4s] object cookies {
     import models.objects.StatCookie
 
     def emptyPercentCookie[_ : P]: P[StatCookie.EmptyPercent.type] =
@@ -381,16 +381,16 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       emptyPercentCookie | emptyFractionalCookie | percentCookie | fractionalCookie
   }
 
-  private[scorg] object headline {
+  private[org4s] object headline {
     import models.Headline._
 
-    private[scorg] def stars[_ : P](fromLevel: Int = 1): P[Int] =
+    private[org4s] def stars[_ : P](fromLevel: Int = 1): P[Int] =
       "*".rep(min = fromLevel, max = ctx.inlineTaskMinLevel - 1).!.map(_.length)
 
-    private[scorg] def priority[_ : P]: P[Priority] =
+    private[org4s] def priority[_ : P]: P[Priority] =
       ("[#" ~ CharIn("A-Z").! ~ "]").map(s => s.toList.head).map(Priority)
 
-    private[scorg] def comment[_ : P]: P[Unit] = P(ctx.headlineComment)
+    private[org4s] def comment[_ : P]: P[Unit] = P(ctx.headlineComment)
 
     // TODO: refactor
     def keyword[_ : P]: P[Headline.Keyword] =
@@ -442,7 +442,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       })
   }
 
-  private[scorg] object plainList {
+  private[org4s] object plainList {
     import models.greater_elements.PlainList._
 
     def counter[_ : P]: P[Counter] = (digit.rep(1) | CharIn("a-zA-Z")).!.map(Counter.apply)
@@ -478,7 +478,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
         | emptyLines(Some(1))
         | (!indentation(0, minIndent - 1) ~ paragraph.paragraph)
       )
-
+    def foo[_ : P]: P[Any] = P("asd").!.~(P("asd").!).~(P("asd").!)
     private def indentation[_ : P](minIndent: Int, maxIndent: Int): P[Int] =
       P(" ".rep(min = minIndent, max = maxIndent) ~ !" ").!.map(_.length)
 
@@ -511,7 +511,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       } yield PlainList.Simple(head :: tail.toList)
   }
 
-  private[scorg] object propertyDrawer {
+  private[org4s] object propertyDrawer {
     import models.elements.NodeProperty
     import models.greater_elements.PropertyDrawer
 
@@ -533,7 +533,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
         .map(PropertyDrawer.apply)
   }
 
-  private[scorg] object paragraph {
+  private[org4s] object paragraph {
     private def anyParagraphObject[_ : P]: P[OrgObject] =
       timestamp.timestamp | link.link | markup.textMarkup | lineBreak | (!eol ~ singleCharText)
 
@@ -547,15 +547,15 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
         .map(Paragraph.apply)
   }
 
-  private[scorg] def lineBreak[_ : P]: P[LineBreak.type] =
+  private[org4s] def lineBreak[_ : P]: P[LineBreak.type] =
     ("""\\""" ~ CharIn("\t ").rep ~ eolOrEnd).map(_ => LineBreak)
 
-  private[scorg] def duration[_ : P]: P[Duration] =
+  private[org4s] def duration[_ : P]: P[Duration] =
     ("=>" ~ s ~ digit.rep(1).! ~ ":" ~ digit.rep(exactly = 2).!)
       .map({ case (h, m) => (h.toInt, m.toInt) })
       .map({ case (h, m) => Duration(h, m) })
 
-  private[scorg] def clock[_ : P]: P[Clock] =
+  private[org4s] def clock[_ : P]: P[Clock] =
     "CLOCK:" ~ s.? ~ (
       timestamp.inactiveTimestamp.map(Clock.Simple.apply)
       | (timestamp.inactiveTimestampRange ~ s ~ duration).map({
@@ -578,7 +578,7 @@ class OrgParser(ctx: OrgContext = OrgContext.defaultCtx) {
       .!
       .map(s => EmptyLines(s.length))
 
-  private[scorg] def section[_ : P](fromLevel: Int = 1): P[Section] =
+  private[org4s] def section[_ : P](fromLevel: Int = 1): P[Section] =
     for {
       headline       <- headline.headline(fromLevel)./
       planning       <- planning.planning.?./

@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 import models.elements.{ EmptyLines, Paragraph }
 import models.greater_elements.PlainList

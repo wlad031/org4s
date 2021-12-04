@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 object models {
 
@@ -215,7 +215,7 @@ object models {
         with TextMarkup.Content
         with greater_elements.PlainList.Content
         with elements.Keyword.Content {
-      override def toString: String = s"T($value)"
+      override def toString: String = value
 
       def ++ (that: Text): Text = Text(this.value + that.value)
     }

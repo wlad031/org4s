@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 /** Configuration of the Org document. */
 case class OrgContext(

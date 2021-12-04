@@ -7,7 +7,8 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "com.lihaoyi"   %% "fastparse"        % "2.2.2",
   "org.scalameta" %% "munit"            % "0.7.26" % Test,
-  "org.scalameta" %% "munit-scalacheck" % "0.7.26" % Test
+  "org.scalameta" %% "munit-scalacheck" % "0.7.26" % Test,
+  "com.github.tchudyk" %% "pocket-integration" % "1.2.0"
 )
 
 scalacOptions ++= Seq(
@@ -15,22 +16,23 @@ scalacOptions ++= Seq(
   "-Xlint:implicit-recursion",
   "-Xfatal-warnings",
   "-deprecation",
-  "-unchecked"
+  "-unchecked",
+  "-P:semanticdb:sourceroot:/Users/vgerasimov/Projects/org4s"
 )
 
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "scorg",
+    name := "org4s",
     organization := "dev.vgerasimov",
     version := "0.1.0",
-    idePackagePrefix := Some("dev.vgerasimov.scorg"),
+    idePackagePrefix := Some("dev.vgerasimov.org4s"),
     testOptions += Tests.Argument(
         framework = Some(new TestFramework("munit.Framework")),
         args = List("-oSD")
       ),
     githubOwner := "wlad031",
-    githubRepository := "scorg"
+    githubRepository := "org4s"
   )
 
 

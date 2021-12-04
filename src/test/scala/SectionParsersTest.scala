@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 import models.Headline._
 import models.elements.{ EmptyLines, NodeProperty, Paragraph }

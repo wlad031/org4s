@@ -1,4 +1,4 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
 import models.objects.Timestamp.Date._
 import models.objects.Timestamp.Time._
