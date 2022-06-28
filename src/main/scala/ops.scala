@@ -1,15 +1,51 @@
-package dev.vgerasimov.scorg
+package dev.vgerasimov.org4s
 
-import models.elements
-import models.elements.Keyword.TableFormula
+import models._
 import models.elements.Paragraph
-import models.objects.Text
+import models.objects.{ Text, TextMarkup }
 
 import scala.reflect.{ ClassTag, classTag }
 
 object ops {
 
+  implicit class DocumentOps(document: Document) {
+
+    def filterSections(f: Section => Boolean): Document = ???
+
+    def mapSections(f: Section => Boolean): Document = ???
+
+    def filterElements(f: Section => Boolean): Document = ???
+
+//    private val toSearchableStringConverter =
+//      implicitly[ToSearchableStringConverter[Headline.Title]]
+
+//    private implicit val matcher: Matcher = toLowerCaseMatcher.and(bySubStringMatcher)
+
+//    def findSectionByTitle(titles: String*)(implicit matcher: Matcher = matcher): Option[Section] = {
+//      def iter(
+//        titles: List[String],
+//        sections: List[Section],
+//        result: Option[Section]
+//      ): Option[Section] = {
+//        titles match {
+//          case Nil => result
+//          case titleToFind :: nextTitlesToFind =>
+//            sections
+//              .map(sec => (sec, sec.headline.title.map(toSearchableStringConverter.toPlainString)))
+//              .find({
+//                case (_, Some(titleContent)) =>
+//                  matcher.isMatched(titleContent, titleToFind).isMatched
+//                case (_, None) => false
+//              })
+//              .flatMap({ case (sec, _) => iter(nextTitlesToFind, sec.childSections, Some(sec)) })
+//        }
+//      }
+//      iter(titles.toList, document.sections, None)
+//    }
+  }
+
   object table {
+    import models.elements.Keyword.TableFormula
     import models.elements.TableRow
     import models.elements.TableRow.{ TableRowCells, TableSep }
     import models.greater_elements.Table
@@ -56,13 +92,44 @@ object ops {
       .reverse
   }
 
-  def foldTexts[A >: Text](objects: List[A]): List[A] = fold[A, Text](objects, _ ++ _)
+  private[org4s] def foldTexts[A >: Text](objects: List[A]): List[A] =
+    fold[A, Text](objects, _ ++ _)
 
-  def foldParagraphs[A >: Paragraph](objects: List[A]): List[A] =
+  private[org4s] def foldParagraphs[A >: Paragraph](objects: List[A]): List[A] =
     for {
       element <- fold[A, Paragraph](objects, _ ++ _)
     } yield element match {
       case Paragraph(objects) => Paragraph(foldTexts(objects))
       case _                  => element
     }
+
+
+
+//  trait Matcher {
+//    def isMatched(matchIn: String, toMatch: String): Matcher.MatchingResult
+//
+//    def and(that: Matcher): Matcher =
+//      (matchIn: String, toMatch: String) => {
+//        val first = this.isMatched(matchIn, toMatch)
+//        if (!first.isMatched) Matcher.MatchingResult(isMatched = false, matchIn, toMatch)
+//        else {
+//          val second = that.isMatched(first.modifiedMatchId, first.modifiedToMatch)
+//          Matcher.MatchingResult(
+//            first.isMatched && second.isMatched,
+//            second.modifiedToMatch,
+//            second.modifiedMatchId
+//          )
+//        }
+//      }
+//  }
+//
+//  object Matcher {
+//    case class MatchingResult(isMatched: Boolean, modifiedMatchId: String, modifiedToMatch: String)
+//  }
+//
+//  val bySubStringMatcher: Matcher = (matchIn: String, toMatch: String) =>
+//    Matcher.MatchingResult(matchIn.contains(toMatch), matchIn, toMatch)
+//
+//  val toLowerCaseMatcher: Matcher = (matchIn: String, toMatch: String) =>
+//    Matcher.MatchingResult(isMatched = true, matchIn.toLowerCase(), toMatch.toLowerCase())
 }
