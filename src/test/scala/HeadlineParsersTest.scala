@@ -5,7 +5,6 @@ import models.Headline._
 import models.objects.Text
 import models.objects.TextMarkup.italic
 
-import fastparse._
 import org.scalacheck.Gen
 import org.scalacheck.Prop._
 
@@ -31,8 +30,8 @@ class HeadlineParsersTest extends ParserCheckSuite {
       case (n, starsString) =>
         val parsed = parse(starsString, parser.headline.stars()(_))
         parsed match {
-          case Parsed.Success(value, _) => assertEquals(value, n)
-          case r: Parsed.Failure        => fail(s"$starsString not parsed: $r")
+          case POut.Success(value, _, _, _) => assertEquals(value, n)
+          case r: POut.Failure        => fail(s"$starsString not parsed: $r")
         }
     }
   }
@@ -42,8 +41,8 @@ class HeadlineParsersTest extends ParserCheckSuite {
       case (char: Char, toParse: String) =>
         val parsed = parse(toParse, parser.headline.priority(_))
         parsed match {
-          case Parsed.Success(value, _) => assertEquals(value, Priority(char))
-          case r: Parsed.Failure        => fail(s"$toParse not parsed: $r")
+          case POut.Success(value, _, _, _) => assertEquals(value, Priority(char))
+          case r: POut.Failure        => fail(s"$toParse not parsed: $r")
         }
     }
   }
@@ -65,8 +64,8 @@ class HeadlineParsersTest extends ParserCheckSuite {
       val toParse = s":$tagString:"
       val parsed = parse(toParse, parser.headline.tags(_))
       parsed match {
-        case Parsed.Success(value, _) => assertEquals(value, List(tagString))
-        case r: Parsed.Failure        => fail(s"$toParse not parsed: $r")
+        case POut.Success(value, _, _, _) => assertEquals(value, List(tagString))
+        case r: POut.Failure        => fail(s"$toParse not parsed: $r")
       }
     }
   }
@@ -76,8 +75,8 @@ class HeadlineParsersTest extends ParserCheckSuite {
       val toParse = tagStrings.mkString(":", ":", ":")
       val parsed = parse(toParse, parser.headline.tags(_))
       parsed match {
-        case Parsed.Success(value, _) => assertEquals(value, tagStrings)
-        case r: Parsed.Failure        => fail(s"$toParse not parsed: $r")
+        case POut.Success(value, _, _, _) => assertEquals(value, tagStrings)
+        case r: POut.Failure        => fail(s"$toParse not parsed: $r")
       }
     }
   }
@@ -92,9 +91,9 @@ class HeadlineParsersTest extends ParserCheckSuite {
         val toParse = starsString
         val parsed = parse(toParse, parser.headline.headline()(_))
         parsed match {
-          case Parsed.Success(value, _) =>
+          case POut.Success(value, _, _, _) =>
             assertEquals(value, Headline(n))
-          case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
+          case r: POut.Failure => fail(s"$toParse not parsed: $r")
         }
     }
   }
@@ -103,7 +102,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
     val toParse = "* this is /italic/ headline"
     val parsed = parse(toParse, parser.headline.headline()(_))
     parsed match {
-      case Parsed.Success(value, _) =>
+      case POut.Success(value, _, _, _) =>
         assertEquals(
           value,
           Headline(
@@ -111,7 +110,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
             title = Some(Title(List(Text("this is"), italic(" ", "italic"), Text(" headline"))))
           )
         )
-      case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
+      case r: POut.Failure => fail(s"$toParse not parsed: $r")
     }
   }
 
@@ -119,7 +118,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
     val toParse = "* this is /italic/ headline :tag1:tag2:"
     val parsed = parse(toParse, parser.headline.headline()(_))
     parsed match {
-      case Parsed.Success(value, _) =>
+      case POut.Success(value, _, _, _) =>
         assertEquals(
           value,
           Headline(
@@ -128,7 +127,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
             tags = List("tag1", "tag2")
           )
         )
-      case r: Parsed.Failure => fail(s"$toParse not parsed: $r")
+      case r: POut.Failure => fail(s"$toParse not parsed: $r")
     }
   }
 
@@ -161,7 +160,7 @@ class HeadlineParsersTest extends ParserCheckSuite {
         val toParse = sb.toString()
         val parsed = parse(toParse, parser.headline.headline()(_))
         parsed match {
-          case Parsed.Success(value, _) =>
+          case POut.Success(value, _, _, greater_elements) =>
             assertEquals(
               value,
               Headline(
@@ -176,13 +175,13 @@ class HeadlineParsersTest extends ParserCheckSuite {
                         .map(set => Keyword.Done(s, Keyword.KWSet(set.todo, set.done)))
                     )
                 ),
-                optPriority.map(_._1).map(Priority),
+                optPriority.map(_._1).map(Priority.apply),
                 optTitle.map(t => optTags.map(_ => t + " ").getOrElse(t)).map(Title.apply),
                 optTags.getOrElse(Nil),
                 hasCommentKeyword = optComment.isDefined
               )
             )
-          case r: Parsed.Failure =>
+          case r: POut.Failure =>
             fail(s"$toParse not parsed: $r")
         }
     }

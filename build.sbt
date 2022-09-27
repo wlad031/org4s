@@ -1,23 +1,17 @@
-scalaVersion := "2.13.6"
+scalaVersion := "3.1.2"
 
 resolvers ++= Seq(
   "jitpack" at "https://jitpack.io"
 )
 
 libraryDependencies ++= Seq(
-  "com.lihaoyi"   %% "fastparse"        % "2.2.2",
-  "org.scalameta" %% "munit"            % "0.7.26" % Test,
-  "org.scalameta" %% "munit-scalacheck" % "0.7.26" % Test,
-  "com.github.tchudyk" %% "pocket-integration" % "1.2.0"
+  "dev.vgerasimov" %% "slowparse"        % "0.1.3",
+  "org.scalameta"  %% "munit"            % "0.7.26" % Test,
+  "org.scalameta"  %% "munit-scalacheck" % "0.7.26" % Test,
 )
 
 scalacOptions ++= Seq(
   "-encoding", "utf8",
-  "-Xlint:implicit-recursion",
-  "-Xfatal-warnings",
-  "-deprecation",
-  "-unchecked",
-  "-P:semanticdb:sourceroot:/Users/vgerasimov/Projects/org4s"
 )
 
 lazy val root = project
@@ -32,7 +26,8 @@ lazy val root = project
         args = List("-oSD")
       ),
     githubOwner := "wlad031",
-    githubRepository := "org4s"
+    githubRepository := "org4s",
+    resolvers += Resolver.githubPackages("wlad031"),
   )
 
 

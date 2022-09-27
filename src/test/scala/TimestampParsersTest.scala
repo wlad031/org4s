@@ -4,7 +4,6 @@ import models.objects.Timestamp.Date._
 import models.objects.Timestamp.Time._
 import models.objects.Timestamp._
 
-import fastparse._
 import org.scalacheck.Gen
 import org.scalacheck.Prop._
 
@@ -33,8 +32,8 @@ class TimestampParsersTest extends ParserCheckSuite {
         val toParse = d.toString
         val parsed = parse(toParse, parser.timestamp.date(_))
         parsed match {
-          case Parsed.Success(value, _) => assertEquals(value, d)
-          case _: Parsed.Failure        => fail(s"$toParse is not parsed")
+          case POut.Success(value, _, _, _) => assertEquals(value, d)
+          case _: POut.Failure        => fail(s"$toParse is not parsed")
         }
       }
     }
@@ -46,8 +45,8 @@ class TimestampParsersTest extends ParserCheckSuite {
         val toParse = t.toString
         val parsed = parse(toParse, parser.timestamp.time(_))
         parsed match {
-          case Parsed.Success(value, _) => assertEquals(value, t)
-          case _: Parsed.Failure        => fail(s"$toParse is not parsed")
+          case POut.Success(value, _, _, _) => assertEquals(value, t)
+          case _: POut.Failure        => fail(s"$toParse is not parsed")
         }
       }
     }
@@ -57,7 +56,7 @@ class TimestampParsersTest extends ParserCheckSuite {
     val toParse = "<2020-01-29 Thu 12:34 +5d>--<2021-03-12 23:59 --31h>"
     val parsed = parse(toParse, parser.timestamp.timestamp(_))
     parsed match {
-      case Parsed.Success(value, _) =>
+      case POut.Success(value, _, _, _) =>
         assertEquals(
           value,
           ActiveTimestampRange(
@@ -73,7 +72,7 @@ class TimestampParsersTest extends ParserCheckSuite {
             )
           )
         )
-      case _: Parsed.Failure => fail(s"$toParse is not parsed")
+      case _: POut.Failure => fail(s"$toParse is not parsed")
     }
   }
 }

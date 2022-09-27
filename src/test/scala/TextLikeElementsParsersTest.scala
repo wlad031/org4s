@@ -2,17 +2,15 @@ package dev.vgerasimov.org4s
 
 import models.objects.TextMarkup._
 
-import fastparse._
-
 class TextLikeElementsParsersTest extends ParserCheckSuite {
 
   test("TEXT MARKUP should parse some valid markup string") {
     val toParse = """*hello world*"""
     val parsed = parse(toParse, parser.markup.textMarkup(_))
     parsed match {
-      case Parsed.Success(value, _) =>
+      case POut.Success(value, _, _, _) =>
         assertEquals(value, bold("", "hello world"))
-      case _: Parsed.Failure => fail(s"$toParse is not parsed")
+      case _: POut.Failure => fail(s"$toParse is not parsed")
     }
   }
 }
